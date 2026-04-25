@@ -20,7 +20,7 @@ export default function Home() {
 
   useEffect(() => { fetchLeaderboard() }, [])
 
-  const saveScore = async (finalScore: number) => {
+  const saveScore = async (finalScore) => {
     if (!session || finalScore === 0) return
     await fetch("/api/score", {
       method: "POST",
