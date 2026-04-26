@@ -6,11 +6,11 @@ export default function Home() {
   const { data: session } = useSession()
   const canvasRef = useRef(null)
   const [score, setScore] = useState(0)
-  const [bestScore, setBestScore] = useState(0)
   const [gameOver, setGameOver] = useState(false)
   const [started, setStarted] = useState(false)
   const [leaderboard, setLeaderboard] = useState([])
   const gameRef = useRef({})
+  const touchRef = useRef({})
 
   const fetchLeaderboard = async () => {
     const res = await fetch("/api/score")
@@ -97,13 +97,42 @@ export default function Home() {
       if (d && !(d.x === -dir.x && d.y === -dir.y)) { nextDir = d; e.preventDefault() }
     }
 
+    const handleTouchStart = (e) => {
+      touchRef.current.startX = e.touches[0].clientX
+      touchRef.current.startY = e.touches[0].clientY
+      e.preventDefault()
+    }
+
+    const handleTouchEnd = (e) => {
+      const dx = e.changedTouches[0].clientX - touchRef.current.startX
+      const dy = e.changedTouches[0].clientY - touchRef.current.startY
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return
+      let d
+      if (Math.abs(dx) > Math.abs(dy)) {
+        d = dx > 0 ? { x: 1, y: 0 } : { x: -1, y: 0 }
+      } else {
+        d = dy > 0 ? { x: 0, y: 1 } : { x: 0, y: -1 }
+      }
+      if (!(d.x === -dir.x && d.y === -dir.y)) { nextDir = d }
+      e.preventDefault()
+    }
+
     placeFood(); draw()
     setScore(0); setGameOver(false); setStarted(true)
     clearInterval(gameRef.current.timer)
     gameRef.current.timer = setInterval(step, 200)
     gameRef.current.handleKey = handleKey
+
     window.addEventListener("keydown", handleKey)
-    return () => { clearInterval(gameRef.current.timer); window.removeEventListener("keydown", handleKey) }
+    canvas.addEventListener("touchstart", handleTouchStart, { passive: false })
+    canvas.addEventListener("touchend", handleTouchEnd, { passive: false })
+
+    return () => {
+      clearInterval(gameRef.current.timer)
+      window.removeEventListener("keydown", handleKey)
+      canvas.removeEventListener("touchstart", handleTouchStart)
+      canvas.removeEventListener("touchend", handleTouchEnd)
+    }
   }, [session])
 
   useEffect(() => {
@@ -136,7 +165,7 @@ export default function Home() {
         </div>
       </div>
 
-      <canvas ref={canvasRef} width={400} height={400} style={{ borderRadius: 10, border: "1px solid #222", display: "block" }} />
+      <canvas ref={canvasRef} width={400} height={400} style={{ borderRadius: 10, border: "1px solid #222", display: "block", touchAction: "none" }} />
 
       <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
         <button onClick={startGame} style={{ padding: "8px 24px", borderRadius: 8, border: "none", background: "#39e07a", color: "#000", fontWeight: 600, cursor: "pointer", fontSize: 14 }}>
@@ -144,8 +173,10 @@ export default function Home() {
         </button>
       </div>
 
+      <p style={{ marginTop: 10, fontSize: 12, color: "#444" }}>📱 手机：滑动控制方向 　⌨️ 电脑：方向键控制</p>
+
       {!session && (
-        <p style={{ marginTop: 12, fontSize: 13, color: "#555" }}>登录后可保存分数到排行榜</p>
+        <p style={{ marginTop: 4, fontSize: 13, color: "#555" }}>登录后可保存分数到排行榜</p>
       )}
 
       <div style={{ marginTop: 28, width: "100%", maxWidth: 400 }}>
